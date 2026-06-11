@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Spotify Lyrics Display Pairing</title>
+
+  <style>
+    :root {
+      --bg: #f4f4f5;
+      --card: #ffffff;
+      --text: #111111;
+      --muted: #666666;
+      --accent: #1db954;
+      --danger: #b00020;
+      --border: #dddddd;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 620px;
+      margin: 0 auto;
+      padding: 22px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      font-size: 26px;
+      margin: 0 0 8px;
+    }
+
+    h2 {
+      font-size: 18px;
+      margin: 24px 0 8px;
+    }
+
+    p {
+      line-height: 1.45;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin: 16px 0 6px;
+    }
+
+    input, textarea {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 13px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      font-size: 15px;
+      font-family: inherit;
+    }
+
+    textarea {
+      min-height: 160px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+    }
+
+    button, .button {
+      display: inline-block;
+      border: 0;
+      border-radius: 12px;
+      padding: 13px 16px;
+      margin: 8px 6px 8px 0;
+      font-size: 15px;
+      cursor: pointer;
+      text-decoration: none;
+      color: #fff;
+      background: #111;
+    }
+
+    .spotify {
+      background: var(--accent);
+      color: #000;
+      font-weight: bold;
+    }
+
+    .secondary {
+      background: #555;
+    }
+
+    .danger {
+      background: var(--danger);
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .box {
+      background: #f7f7f7;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      margin: 12px 0;
+      word-break: break-word;
+    }
+
+    code {
+      background: #eeeeee;
+      padding: 2px 5px;
+      border-radius: 5px;
+    }
+
+    .ok {
+      color: #0a7a2f;
+      font-weight: bold;
+    }
+
+    .bad {
+      color: var(--danger);
+      font-weight: bold;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    ol {
+      padding-left: 22px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Spotify Lyrics Display Pairing</h1>
+      <p class="muted">
+        This page creates a Spotify pairing payload for your ESP32 e-paper lyrics display.
+        No server is used. Everything happens in your browser.
+      </p>
+
+      <div id="setup-section">
+        <h2>Step 1: Spotify Client ID</h2>
+
+        <p>
+          Paste the Client ID from your Spotify Developer app.
+        </p>
+
+        <label for="client-id">Spotify Client ID</label>
+        <input id="client-id" placeholder="Example: 123abc456def..." autocomplete="off" />
+
+        <div class="box">
+          <p class="muted">
+            Add this exact Redirect URI in your Spotify Developer Dashboard:
+          </p>
+          <p><code id="redirect-uri-display"></code></p>
+        </div>
+
+        <button class="spotify" id="login-button">
+          Login with Spotify
+        </button>
+
+        <p class="muted">
+          You will be sent to Spotify's official login page. After approval, you will return here and get a pairing payload.
+        </p>
+      </div>
+
+      <div id="result-section" class="hidden">
+        <h2>Step 2: Copy Pairing Payload</h2>
+
+        <p class="ok">Spotify pairing payload generated.</p>
+
+        <p>
+          Copy this payload and paste it into your ESP32 setup page.
+        </p>
+
+        <textarea id="payload-output" readonly></textarea>
+
+        <button id="copy-button">Copy Payload</button>
+        <button class="secondary" id="start-over-button">Start Over</button>
+
+        <p class="muted">
+          Treat this payload like a password. It contains a Spotify refresh token for your account.
+        </p>
+      </div>
+
+      <div id="error-section" class="hidden">
+        <h2>Error</h2>
+        <p class="bad" id="error-message"></p>
+        <button class="secondary" id="error-reset-button">Start Over</button>
+      </div>
+
+      <h2>How to use</h2>
+      <ol>
+        <li>Enter your Spotify Client ID.</li>
+        <li>Click <b>Login with Spotify</b>.</li>
+        <li>Approve access.</li>
+        <li>Copy the generated pairing payload.</li>
+        <li>Paste it into your ESP32 setup page.</li>
+      </ol>
+
+      <p class="muted">
+        Required Spotify scope: <code>user-read-playback-state</code>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const SPOTIFY_AUTHORIZE_URL = "https://accounts.spotify.com/authorize";
+    const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
+    const REQUIRED_SCOPE = "user-read-playback-state";
+    const PAYLOAD_PREFIX = "SPOTIFY_PAIR_V1:";
+
+    const clientIdInput = document.getElementById("client-id");
+    const loginButton = document.getElementById("login-button");
+    const redirectUriDisplay = document.getElementById("redirect-uri-display");
+
+    const setupSection = document.getElementById("setup-section");
+    const resultSection = document.getElementById("result-section");
+    const errorSection = document.getElementById("error-section");
+    const errorMessage = document.getElementById("error-message");
+
+    const payloadOutput = document.getElementById("payload-output");
+    const copyButton = document.getElementById("copy-button");
+    const startOverButton = document.getElementById("start-over-button");
+    const errorResetButton = document.getElementById("error-reset-button");
+
+    function getRedirectUri() {
+      // Use the exact current page path, without query string.
+      // Example: https://username.github.io/spotify-lyrics-pair/
+      return window.location.origin + window.location.pathname;
+    }
+
+    function base64UrlEncodeBytes(bytes) {
+      let binary = "";
+      bytes.forEach((b) => binary += String.fromCharCode(b));
+
+      return btoa(binary)
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=+$/g, "");
+    }
+
+    function base64UrlEncodeString(str) {
+      const bytes = new TextEncoder().encode(str);
+      return base64UrlEncodeBytes(bytes);
+    }
+
+    function randomString(length) {
+      const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+      const values = crypto.getRandomValues(new Uint8Array(length));
+      let output = "";
+
+      for (let i = 0; i < length; i++) {
+        output += possible[values[i] % possible.length];
+      }
+
+      return output;
+    }
+
+    async function sha256Base64Url(input) {
+      const data = new TextEncoder().encode(input);
+      const digest = await crypto.subtle.digest("SHA-256", data);
+      return base64UrlEncodeBytes(new Uint8Array(digest));
+    }
+
+    function showError(message) {
+      setupSection.classList.add("hidden");
+      resultSection.classList.add("hidden");
+      errorSection.classList.remove("hidden");
+      errorMessage.textContent = message;
+    }
+
+    function showResult(payload) {
+      setupSection.classList.add("hidden");
+      errorSection.classList.add("hidden");
+      resultSection.classList.remove("hidden");
+      payloadOutput.value = payload;
+    }
+
+    function resetFlow() {
+      sessionStorage.removeItem("spotify_client_id");
+      sessionStorage.removeItem("spotify_code_verifier");
+
+      const cleanUrl = getRedirectUri();
+      window.location.replace(cleanUrl);
+    }
+
+    async function startSpotifyLogin() {
+      const clientId = clientIdInput.value.trim();
+
+      if (!clientId) {
+        showError("Please enter your Spotify Client ID.");
+        return;
+      }
+
+      const redirectUri = getRedirectUri();
+      const codeVerifier = randomString(96);
+      const codeChallenge = await sha256Base64Url(codeVerifier);
+
+      sessionStorage.setItem("spotify_client_id", clientId);
+      sessionStorage.setItem("spotify_code_verifier", codeVerifier);
+
+      const params = new URLSearchParams({
+        response_type: "code",
+        client_id: clientId,
+        scope: REQUIRED_SCOPE,
+        redirect_uri: redirectUri,
+        code_challenge_method: "S256",
+        code_challenge: codeChallenge,
+
+        // Force Spotify to show approval again.
+        // This helps ensure a refresh_token is returned.
+        show_dialog: "true"
+      });
+
+      window.location.href = SPOTIFY_AUTHORIZE_URL + "?" + params.toString();
+    }
+
+    async function exchangeCodeForToken(code) {
+      const clientId = sessionStorage.getItem("spotify_client_id");
+      const codeVerifier = sessionStorage.getItem("spotify_code_verifier");
+      const redirectUri = getRedirectUri();
+
+      if (!clientId || !codeVerifier) {
+        throw new Error("Missing saved login session. Please start over.");
+      }
+
+      const body = new URLSearchParams({
+        grant_type: "authorization_code",
+        code: code,
+        redirect_uri: redirectUri,
+        client_id: clientId,
+        code_verifier: codeVerifier
+      });
+
+      const response = await fetch(SPOTIFY_TOKEN_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body
+      });
+
+      const text = await response.text();
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error("Spotify returned a non-JSON response: " + text);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.error_description || data.error || "Token exchange failed.");
+      }
+
+      if (!data.refresh_token) {
+        throw new Error("Spotify did not return a refresh token. Try Start Over and approve access again.");
+      }
+
+      return {
+        client_id: clientId,
+        refresh_token: data.refresh_token,
+        scope: data.scope || REQUIRED_SCOPE,
+        token_type: data.token_type || "Bearer",
+        created_at: Math.floor(Date.now() / 1000)
+      };
+    }
+
+    function buildPairingPayload(tokenData) {
+      const json = JSON.stringify(tokenData);
+      const encoded = base64UrlEncodeString(json);
+      return PAYLOAD_PREFIX + encoded;
+    }
+
+    async function handleCallbackIfPresent() {
+      const params = new URLSearchParams(window.location.search);
+
+      if (params.has("error")) {
+        showError("Spotify returned error: " + params.get("error"));
+        return;
+      }
+
+      if (!params.has("code")) {
+        return;
+      }
+
+      try {
+        const code = params.get("code");
+        const tokenData = await exchangeCodeForToken(code);
+        const payload = buildPairingPayload(tokenData);
+
+        sessionStorage.removeItem("spotify_code_verifier");
+
+        showResult(payload);
+      } catch (err) {
+        showError(err.message || String(err));
+      }
+    }
+
+    async function copyPayload() {
+      try {
+        await navigator.clipboard.writeText(payloadOutput.value);
+        copyButton.textContent = "Copied!";
+        setTimeout(() => copyButton.textContent = "Copy Payload", 1500);
+      } catch {
+        payloadOutput.select();
+        document.execCommand("copy");
+        copyButton.textContent = "Copied!";
+        setTimeout(() => copyButton.textContent = "Copy Payload", 1500);
+      }
+    }
+
+    redirectUriDisplay.textContent = getRedirectUri();
+
+    const savedClientId = sessionStorage.getItem("spotify_client_id");
+    if (savedClientId) {
+      clientIdInput.value = savedClientId;
+    }
+
+    loginButton.addEventListener("click", startSpotifyLogin);
+    copyButton.addEventListener("click", copyPayload);
+    startOverButton.addEventListener("click", resetFlow);
+    errorResetButton.addEventListener("click", resetFlow);
+
+    handleCallbackIfPresent();
+  </script>
+</body>
+</html>
