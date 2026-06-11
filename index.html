@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Spotify Lyrics Display Pairing</title>
+  <title>Spotify Lyrics Display Setup</title>
 
   <style>
     :root {
@@ -11,22 +11,23 @@
       --card: #ffffff;
       --text: #111111;
       --muted: #666666;
-      --accent: #1db954;
-      --danger: #b00020;
       --border: #dddddd;
+      --spotify: #1db954;
+      --danger: #b00020;
+      --ok: #0a7a2f;
     }
 
     body {
       margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
       background: var(--bg);
       color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
     }
 
     .wrap {
-      max-width: 620px;
+      max-width: 680px;
       margin: 0 auto;
-      padding: 22px;
+      padding: 20px;
     }
 
     .card {
@@ -42,8 +43,8 @@
     }
 
     h2 {
-      font-size: 18px;
-      margin: 24px 0 8px;
+      font-size: 19px;
+      margin: 26px 0 10px;
     }
 
     p {
@@ -53,40 +54,43 @@
     label {
       display: block;
       font-weight: bold;
-      margin: 16px 0 6px;
+      margin: 14px 0 6px;
     }
 
     input, textarea {
       width: 100%;
       box-sizing: border-box;
       padding: 13px;
-      border-radius: 12px;
       border: 1px solid var(--border);
+      border-radius: 12px;
       font-size: 15px;
       font-family: inherit;
     }
 
     textarea {
-      min-height: 160px;
+      min-height: 96px;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 13px;
     }
 
-    button, .button {
-      display: inline-block;
+    button {
       border: 0;
       border-radius: 12px;
       padding: 13px 16px;
       margin: 8px 6px 8px 0;
       font-size: 15px;
       cursor: pointer;
-      text-decoration: none;
-      color: #fff;
       background: #111;
+      color: #fff;
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
     }
 
     .spotify {
-      background: var(--accent);
+      background: var(--spotify);
       color: #000;
       font-weight: bold;
     }
@@ -104,6 +108,16 @@
       font-size: 14px;
     }
 
+    .ok {
+      color: var(--ok);
+      font-weight: bold;
+    }
+
+    .bad {
+      color: var(--danger);
+      font-weight: bold;
+    }
+
     .box {
       background: #f7f7f7;
       border: 1px solid var(--border);
@@ -113,24 +127,37 @@
       word-break: break-word;
     }
 
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 9px;
+      border-radius: 999px;
+      background: #eeeeee;
+      font-size: 13px;
+      color: #333;
+    }
+
     code {
       background: #eeeeee;
       padding: 2px 5px;
       border-radius: 5px;
-    }
-
-    .ok {
-      color: #0a7a2f;
-      font-weight: bold;
-    }
-
-    .bad {
-      color: var(--danger);
-      font-weight: bold;
+      word-break: break-all;
     }
 
     .hidden {
       display: none;
+    }
+
+    .step {
+      border-top: 1px solid #eeeeee;
+      margin-top: 18px;
+      padding-top: 18px;
     }
 
     ol {
@@ -142,102 +169,222 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Spotify Lyrics Display Pairing</h1>
+      <h1>Spotify Lyrics Display Setup</h1>
       <p class="muted">
-        This page creates a Spotify pairing payload for your ESP32 e-paper lyrics display.
-        No server is used. Everything happens in your browser.
+        Set up your ESP32 e-paper lyrics display using Spotify login and Bluetooth.
       </p>
 
-      <div id="setup-section">
-        <h2>Step 1: Spotify Client ID</h2>
+      <div class="box">
+        <div class="row">
+          <span class="pill" id="spotify-pill">Spotify: Not connected</span>
+          <span class="pill" id="ble-pill">Bluetooth: Not connected</span>
+        </div>
+      </div>
 
+      <div id="browser-warning" class="box hidden">
+        <p class="bad">Web Bluetooth may not be supported in this browser.</p>
+        <p class="muted">
+          Use Chrome or Edge on Android, Windows, or macOS. iPhone Safari is not supported.
+        </p>
+      </div>
+
+      <div class="step">
+        <h2>1. Spotify Login</h2>
         <p>
-          Paste the Client ID from your Spotify Developer app.
+          Enter your Spotify Developer app Client ID. This is not a secret.
         </p>
 
         <label for="client-id">Spotify Client ID</label>
         <input id="client-id" placeholder="Example: 123abc456def..." autocomplete="off" />
 
         <div class="box">
-          <p class="muted">
-            Add this exact Redirect URI in your Spotify Developer Dashboard:
-          </p>
+          <p class="muted">Add this exact Redirect URI in your Spotify Developer Dashboard:</p>
           <p><code id="redirect-uri-display"></code></p>
         </div>
 
-        <button class="spotify" id="login-button">
-          Login with Spotify
-        </button>
+        <button class="spotify" id="login-button">Login with Spotify</button>
+        <button class="secondary" id="clear-spotify-button">Clear Spotify Session</button>
 
-        <p class="muted">
-          You will be sent to Spotify's official login page. After approval, you will return here and get a pairing payload.
+        <p id="spotify-status" class="muted">
+          Not logged in yet.
         </p>
       </div>
 
-      <div id="result-section" class="hidden">
-        <h2>Step 2: Copy Pairing Payload</h2>
-
-        <p class="ok">Spotify pairing payload generated.</p>
-
+      <div class="step">
+        <h2>2. Wi-Fi Details</h2>
         <p>
-          Copy this payload and paste it into your ESP32 setup page.
+          Enter the Wi-Fi network that the ESP32 should connect to.
         </p>
 
-        <textarea id="payload-output" readonly></textarea>
+        <label for="wifi-ssid">Wi-Fi Name / SSID</label>
+        <input id="wifi-ssid" placeholder="Home Wi-Fi name" autocomplete="off" />
 
-        <button id="copy-button">Copy Payload</button>
-        <button class="secondary" id="start-over-button">Start Over</button>
+        <label for="wifi-password">Wi-Fi Password</label>
+        <input id="wifi-password" placeholder="Wi-Fi password" type="password" autocomplete="off" />
+
+        <label>
+          <input id="show-password" type="checkbox" style="width:auto;margin-right:6px;" />
+          Show password
+        </label>
 
         <p class="muted">
-          Treat this payload like a password. It contains a Spotify refresh token for your account.
+          This is sent directly to your ESP32 over Bluetooth.
         </p>
       </div>
 
-      <div id="error-section" class="hidden">
-        <h2>Error</h2>
-        <p class="bad" id="error-message"></p>
-        <button class="secondary" id="error-reset-button">Start Over</button>
+      <div class="step">
+        <h2>3. Connect ESP32 by Bluetooth</h2>
+        <p>
+          Put your ESP32 in setup mode. It should advertise as something like
+          <code>LyricsDisplay</code>.
+        </p>
+
+        <button id="connect-ble-button">Connect Display</button>
+        <button class="secondary" id="disconnect-ble-button" disabled>Disconnect</button>
+
+        <p id="ble-status" class="muted">
+          Not connected.
+        </p>
+
+        <div class="box">
+          <p class="muted">Device status:</p>
+          <p id="device-status">No status yet.</p>
+        </div>
       </div>
 
-      <h2>How to use</h2>
-      <ol>
-        <li>Enter your Spotify Client ID.</li>
-        <li>Click <b>Login with Spotify</b>.</li>
-        <li>Approve access.</li>
-        <li>Copy the generated pairing payload.</li>
-        <li>Paste it into your ESP32 setup page.</li>
-      </ol>
+      <div class="step">
+        <h2>4. Send Setup to Device</h2>
+        <p>
+          When Spotify and Bluetooth are connected, send the full setup package.
+        </p>
 
-      <p class="muted">
-        Required Spotify scope: <code>user-read-playback-state</code>
-      </p>
+        <button id="send-setup-button" disabled>Send Setup to ESP32</button>
+        <button class="danger" id="factory-reset-button" disabled>Factory Reset Device</button>
+
+        <p id="send-status" class="muted">
+          Waiting for Spotify login and Bluetooth connection.
+        </p>
+      </div>
+
+      <div class="step">
+        <h2>Debug Payload</h2>
+        <p class="muted">
+          This is what will be sent to the ESP32, chunked over BLE.
+        </p>
+        <textarea id="debug-payload" readonly></textarea>
+      </div>
+
+      <div class="step">
+        <h2>Setup summary</h2>
+        <ol>
+          <li>Enter Spotify Client ID.</li>
+          <li>Click <b>Login with Spotify</b>.</li>
+          <li>Enter Wi-Fi name and password.</li>
+          <li>Click <b>Connect Display</b>.</li>
+          <li>Click <b>Send Setup to ESP32</b>.</li>
+        </ol>
+      </div>
     </div>
   </div>
 
   <script>
+    // ==========================================================
+    // BLE UUIDs - ESP32 firmware must use the same values
+    // ==========================================================
+    const BLE_SERVICE_UUID = "7b7d0001-8f4a-4f6a-9f5c-000000000001";
+    const BLE_CONFIG_UUID  = "7b7d0002-8f4a-4f6a-9f5c-000000000002";
+    const BLE_STATUS_UUID  = "7b7d0003-8f4a-4f6a-9f5c-000000000003";
+
+    // ==========================================================
+    // Spotify OAuth config
+    // ==========================================================
     const SPOTIFY_AUTHORIZE_URL = "https://accounts.spotify.com/authorize";
     const SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token";
     const REQUIRED_SCOPE = "user-read-playback-state";
-    const PAYLOAD_PREFIX = "SPOTIFY_PAIR_V1:";
 
+    // ==========================================================
+    // DOM
+    // ==========================================================
     const clientIdInput = document.getElementById("client-id");
     const loginButton = document.getElementById("login-button");
+    const clearSpotifyButton = document.getElementById("clear-spotify-button");
     const redirectUriDisplay = document.getElementById("redirect-uri-display");
+    const spotifyStatus = document.getElementById("spotify-status");
+    const spotifyPill = document.getElementById("spotify-pill");
 
-    const setupSection = document.getElementById("setup-section");
-    const resultSection = document.getElementById("result-section");
-    const errorSection = document.getElementById("error-section");
-    const errorMessage = document.getElementById("error-message");
+    const wifiSsidInput = document.getElementById("wifi-ssid");
+    const wifiPasswordInput = document.getElementById("wifi-password");
+    const showPasswordCheckbox = document.getElementById("show-password");
 
-    const payloadOutput = document.getElementById("payload-output");
-    const copyButton = document.getElementById("copy-button");
-    const startOverButton = document.getElementById("start-over-button");
-    const errorResetButton = document.getElementById("error-reset-button");
+    const connectBleButton = document.getElementById("connect-ble-button");
+    const disconnectBleButton = document.getElementById("disconnect-ble-button");
+    const bleStatus = document.getElementById("ble-status");
+    const blePill = document.getElementById("ble-pill");
+    const deviceStatus = document.getElementById("device-status");
 
+    const sendSetupButton = document.getElementById("send-setup-button");
+    const factoryResetButton = document.getElementById("factory-reset-button");
+    const sendStatus = document.getElementById("send-status");
+    const debugPayload = document.getElementById("debug-payload");
+    const browserWarning = document.getElementById("browser-warning");
+
+    // ==========================================================
+    // State
+    // ==========================================================
+    let spotifyClientId = "";
+    let spotifyRefreshToken = "";
+    let spotifyScope = "";
+
+    let bleDevice = null;
+    let bleServer = null;
+    let configCharacteristic = null;
+    let statusCharacteristic = null;
+
+    // ==========================================================
+    // Utility
+    // ==========================================================
     function getRedirectUri() {
-      // Use the exact current page path, without query string.
-      // Example: https://username.github.io/spotify-lyrics-pair/
+      // GitHub Pages URL with path, no query string.
+      // Example: https://username.github.io/spotify-lyrics-setup/
       return window.location.origin + window.location.pathname;
+    }
+
+    function setText(el, text) {
+      el.textContent = text;
+    }
+
+    function setSpotifyConnected(connected) {
+      if (connected) {
+        spotifyPill.textContent = "Spotify: Connected";
+        spotifyPill.classList.add("ok");
+      } else {
+        spotifyPill.textContent = "Spotify: Not connected";
+        spotifyPill.classList.remove("ok");
+      }
+      updateSendButton();
+    }
+
+    function setBleConnected(connected) {
+      if (connected) {
+        blePill.textContent = "Bluetooth: Connected";
+        blePill.classList.add("ok");
+        connectBleButton.disabled = true;
+        disconnectBleButton.disabled = false;
+        factoryResetButton.disabled = false;
+      } else {
+        blePill.textContent = "Bluetooth: Not connected";
+        blePill.classList.remove("ok");
+        connectBleButton.disabled = false;
+        disconnectBleButton.disabled = true;
+        factoryResetButton.disabled = true;
+      }
+      updateSendButton();
+    }
+
+    function updateSendButton() {
+      const hasSpotify = spotifyClientId && spotifyRefreshToken;
+      const hasBle = configCharacteristic !== null;
+      sendSetupButton.disabled = !(hasSpotify && hasBle);
     }
 
     function base64UrlEncodeBytes(bytes) {
@@ -273,33 +420,57 @@
       return base64UrlEncodeBytes(new Uint8Array(digest));
     }
 
-    function showError(message) {
-      setupSection.classList.add("hidden");
-      resultSection.classList.add("hidden");
-      errorSection.classList.remove("hidden");
-      errorMessage.textContent = message;
+    function delay(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
     }
 
-    function showResult(payload) {
-      setupSection.classList.add("hidden");
-      errorSection.classList.add("hidden");
-      resultSection.classList.remove("hidden");
-      payloadOutput.value = payload;
+    function buildSetupObject() {
+      const ssid = wifiSsidInput.value.trim();
+      const password = wifiPasswordInput.value;
+
+      return {
+        type: "setup",
+        version: 1,
+        wifi: {
+          ssid,
+          password
+        },
+        spotify: {
+          client_id: spotifyClientId,
+          refresh_token: spotifyRefreshToken,
+          scope: spotifyScope || REQUIRED_SCOPE
+        },
+        created_at: Math.floor(Date.now() / 1000)
+      };
     }
 
-    function resetFlow() {
-      sessionStorage.removeItem("spotify_client_id");
-      sessionStorage.removeItem("spotify_code_verifier");
-
-      const cleanUrl = getRedirectUri();
-      window.location.replace(cleanUrl);
+    function updateDebugPayload() {
+      const obj = buildSetupObject();
+      debugPayload.value = JSON.stringify(obj, null, 2);
     }
 
+    function validateSetupInputs() {
+      if (!spotifyClientId || !spotifyRefreshToken) {
+        throw new Error("Spotify is not connected yet.");
+      }
+
+      if (!wifiSsidInput.value.trim()) {
+        throw new Error("Please enter Wi-Fi SSID.");
+      }
+
+      if (!configCharacteristic) {
+        throw new Error("Bluetooth device is not connected.");
+      }
+    }
+
+    // ==========================================================
+    // Spotify login
+    // ==========================================================
     async function startSpotifyLogin() {
       const clientId = clientIdInput.value.trim();
 
       if (!clientId) {
-        showError("Please enter your Spotify Client ID.");
+        alert("Please enter your Spotify Client ID.");
         return;
       }
 
@@ -317,27 +488,24 @@
         redirect_uri: redirectUri,
         code_challenge_method: "S256",
         code_challenge: codeChallenge,
-
-        // Force Spotify to show approval again.
-        // This helps ensure a refresh_token is returned.
         show_dialog: "true"
       });
 
       window.location.href = SPOTIFY_AUTHORIZE_URL + "?" + params.toString();
     }
 
-    async function exchangeCodeForToken(code) {
+    async function exchangeSpotifyCode(code) {
       const clientId = sessionStorage.getItem("spotify_client_id");
       const codeVerifier = sessionStorage.getItem("spotify_code_verifier");
       const redirectUri = getRedirectUri();
 
       if (!clientId || !codeVerifier) {
-        throw new Error("Missing saved login session. Please start over.");
+        throw new Error("Missing Spotify login session. Start over.");
       }
 
       const body = new URLSearchParams({
         grant_type: "authorization_code",
-        code: code,
+        code,
         redirect_uri: redirectUri,
         client_id: clientId,
         code_verifier: codeVerifier
@@ -357,37 +525,39 @@
       try {
         data = JSON.parse(text);
       } catch {
-        throw new Error("Spotify returned a non-JSON response: " + text);
+        throw new Error("Spotify returned non-JSON response: " + text);
       }
 
       if (!response.ok) {
-        throw new Error(data.error_description || data.error || "Token exchange failed.");
+        throw new Error(data.error_description || data.error || "Spotify token exchange failed.");
       }
 
       if (!data.refresh_token) {
-        throw new Error("Spotify did not return a refresh token. Try Start Over and approve access again.");
+        throw new Error("Spotify did not return a refresh token. Click Clear Spotify Session, then login again.");
       }
 
-      return {
-        client_id: clientId,
-        refresh_token: data.refresh_token,
-        scope: data.scope || REQUIRED_SCOPE,
-        token_type: data.token_type || "Bearer",
-        created_at: Math.floor(Date.now() / 1000)
-      };
+      spotifyClientId = clientId;
+      spotifyRefreshToken = data.refresh_token;
+      spotifyScope = data.scope || REQUIRED_SCOPE;
+
+      localStorage.setItem("last_spotify_client_id", clientId);
+
+      setSpotifyConnected(true);
+      spotifyStatus.textContent = "Spotify connected. Now connect the ESP32 over Bluetooth.";
+      sessionStorage.removeItem("spotify_code_verifier");
+
+      const cleanUrl = getRedirectUri();
+      window.history.replaceState({}, document.title, cleanUrl);
+
+      updateDebugPayload();
     }
 
-    function buildPairingPayload(tokenData) {
-      const json = JSON.stringify(tokenData);
-      const encoded = base64UrlEncodeString(json);
-      return PAYLOAD_PREFIX + encoded;
-    }
-
-    async function handleCallbackIfPresent() {
+    async function handleSpotifyCallbackIfPresent() {
       const params = new URLSearchParams(window.location.search);
 
       if (params.has("error")) {
-        showError("Spotify returned error: " + params.get("error"));
+        spotifyStatus.textContent = "Spotify error: " + params.get("error");
+        spotifyStatus.classList.add("bad");
         return;
       }
 
@@ -396,44 +566,224 @@
       }
 
       try {
+        spotifyStatus.textContent = "Exchanging Spotify code...";
         const code = params.get("code");
-        const tokenData = await exchangeCodeForToken(code);
-        const payload = buildPairingPayload(tokenData);
-
-        sessionStorage.removeItem("spotify_code_verifier");
-
-        showResult(payload);
+        await exchangeSpotifyCode(code);
       } catch (err) {
-        showError(err.message || String(err));
+        spotifyStatus.textContent = err.message || String(err);
+        spotifyStatus.classList.add("bad");
+        setSpotifyConnected(false);
       }
     }
 
-    async function copyPayload() {
+    function clearSpotifySession() {
+      spotifyClientId = "";
+      spotifyRefreshToken = "";
+      spotifyScope = "";
+      sessionStorage.removeItem("spotify_client_id");
+      sessionStorage.removeItem("spotify_code_verifier");
+      setSpotifyConnected(false);
+      spotifyStatus.textContent = "Spotify session cleared.";
+      updateDebugPayload();
+
+      const cleanUrl = getRedirectUri();
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+
+    // ==========================================================
+    // BLE
+    // ==========================================================
+    function handleDisconnect() {
+      configCharacteristic = null;
+      statusCharacteristic = null;
+      bleServer = null;
+      setBleConnected(false);
+      bleStatus.textContent = "Disconnected.";
+      deviceStatus.textContent = "No status.";
+    }
+
+    async function connectBle() {
+      if (!navigator.bluetooth) {
+        alert("Web Bluetooth is not supported in this browser. Use Chrome or Edge on Android/laptop.");
+        return;
+      }
+
       try {
-        await navigator.clipboard.writeText(payloadOutput.value);
-        copyButton.textContent = "Copied!";
-        setTimeout(() => copyButton.textContent = "Copy Payload", 1500);
-      } catch {
-        payloadOutput.select();
-        document.execCommand("copy");
-        copyButton.textContent = "Copied!";
-        setTimeout(() => copyButton.textContent = "Copy Payload", 1500);
+        bleStatus.textContent = "Opening Bluetooth picker...";
+
+        bleDevice = await navigator.bluetooth.requestDevice({
+          filters: [
+            { services: [BLE_SERVICE_UUID] },
+            { namePrefix: "LyricsDisplay" }
+          ],
+          optionalServices: [BLE_SERVICE_UUID]
+        });
+
+        bleDevice.addEventListener("gattserverdisconnected", handleDisconnect);
+
+        bleStatus.textContent = "Connecting to " + (bleDevice.name || "device") + "...";
+
+        bleServer = await bleDevice.gatt.connect();
+        const service = await bleServer.getPrimaryService(BLE_SERVICE_UUID);
+
+        configCharacteristic = await service.getCharacteristic(BLE_CONFIG_UUID);
+
+        try {
+          statusCharacteristic = await service.getCharacteristic(BLE_STATUS_UUID);
+          await statusCharacteristic.startNotifications();
+          statusCharacteristic.addEventListener("characteristicvaluechanged", (event) => {
+            const value = new TextDecoder().decode(event.target.value);
+            deviceStatus.textContent = value;
+          });
+
+          try {
+            const statusValue = await statusCharacteristic.readValue();
+            deviceStatus.textContent = new TextDecoder().decode(statusValue);
+          } catch {}
+        } catch {
+          deviceStatus.textContent = "Status characteristic not available.";
+        }
+
+        setBleConnected(true);
+        bleStatus.textContent = "Connected to " + (bleDevice.name || "ESP32") + ".";
+      } catch (err) {
+        bleStatus.textContent = err.message || String(err);
+        setBleConnected(false);
       }
     }
 
-    redirectUriDisplay.textContent = getRedirectUri();
-
-    const savedClientId = sessionStorage.getItem("spotify_client_id");
-    if (savedClientId) {
-      clientIdInput.value = savedClientId;
+    function disconnectBle() {
+      if (bleDevice && bleDevice.gatt.connected) {
+        bleDevice.gatt.disconnect();
+      }
+      handleDisconnect();
     }
 
-    loginButton.addEventListener("click", startSpotifyLogin);
-    copyButton.addEventListener("click", copyPayload);
-    startOverButton.addEventListener("click", resetFlow);
-    errorResetButton.addEventListener("click", resetFlow);
+    async function writeBleJson(obj) {
+      const text = JSON.stringify(obj);
+      const bytes = new TextEncoder().encode(text);
+      await configCharacteristic.writeValueWithResponse(bytes);
+    }
 
-    handleCallbackIfPresent();
+    async function sendChunkedSetup() {
+      try {
+        validateSetupInputs();
+
+        const setupObj = buildSetupObject();
+        const setupJson = JSON.stringify(setupObj);
+        const encoded = base64UrlEncodeString(setupJson);
+
+        debugPayload.value = JSON.stringify(setupObj, null, 2);
+
+        const transferId = Math.random().toString(36).slice(2) + Date.now().toString(36);
+
+        // Keep each BLE write small. ESP32 side should decode JSON command, then append chunk data.
+        const chunkSize = 140;
+        const chunks = [];
+
+        for (let i = 0; i < encoded.length; i += chunkSize) {
+          chunks.push(encoded.slice(i, i + chunkSize));
+        }
+
+        sendSetupButton.disabled = true;
+        sendStatus.textContent = "Sending setup...";
+
+        await writeBleJson({
+          type: "begin",
+          id: transferId,
+          total: chunks.length,
+          length: encoded.length
+        });
+
+        await delay(120);
+
+        for (let i = 0; i < chunks.length; i++) {
+          sendStatus.textContent = `Sending chunk ${i + 1} of ${chunks.length}...`;
+
+          await writeBleJson({
+            type: "chunk",
+            id: transferId,
+            index: i,
+            data: chunks[i]
+          });
+
+          await delay(60);
+        }
+
+        sendStatus.textContent = "Finalizing setup...";
+
+        await writeBleJson({
+          type: "end",
+          id: transferId
+        });
+
+        sendStatus.textContent = "Setup sent. ESP32 should save settings and restart.";
+      } catch (err) {
+        sendStatus.textContent = err.message || String(err);
+      } finally {
+        updateSendButton();
+      }
+    }
+
+    async function factoryResetDevice() {
+      if (!configCharacteristic) {
+        alert("Connect to the ESP32 first.");
+        return;
+      }
+
+      const ok = confirm("Factory reset the ESP32? This clears Wi-Fi and Spotify settings.");
+      if (!ok) return;
+
+      try {
+        await writeBleJson({
+          type: "factory_reset"
+        });
+
+        sendStatus.textContent = "Factory reset command sent.";
+      } catch (err) {
+        sendStatus.textContent = err.message || String(err);
+      }
+    }
+
+    // ==========================================================
+    // Init
+    // ==========================================================
+    function init() {
+      redirectUriDisplay.textContent = getRedirectUri();
+
+      const lastClientId = localStorage.getItem("last_spotify_client_id");
+      if (lastClientId) {
+        clientIdInput.value = lastClientId;
+      }
+
+      if (!navigator.bluetooth) {
+        browserWarning.classList.remove("hidden");
+      }
+
+      loginButton.addEventListener("click", startSpotifyLogin);
+      clearSpotifyButton.addEventListener("click", clearSpotifySession);
+
+      connectBleButton.addEventListener("click", connectBle);
+      disconnectBleButton.addEventListener("click", disconnectBle);
+
+      sendSetupButton.addEventListener("click", sendChunkedSetup);
+      factoryResetButton.addEventListener("click", factoryResetDevice);
+
+      showPasswordCheckbox.addEventListener("change", () => {
+        wifiPasswordInput.type = showPasswordCheckbox.checked ? "text" : "password";
+      });
+
+      wifiSsidInput.addEventListener("input", updateDebugPayload);
+      wifiPasswordInput.addEventListener("input", updateDebugPayload);
+
+      setSpotifyConnected(false);
+      setBleConnected(false);
+      updateDebugPayload();
+
+      handleSpotifyCallbackIfPresent();
+    }
+
+    init();
   </script>
 </body>
 </html>
