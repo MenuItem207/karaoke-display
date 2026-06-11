@@ -678,7 +678,7 @@
         const transferId = Math.random().toString(36).slice(2) + Date.now().toString(36);
 
         // Keep each BLE write small. ESP32 side should decode JSON command, then append chunk data.
-        const chunkSize = 140;
+        const chunkSize = 40;
         const chunks = [];
 
         for (let i = 0; i < encoded.length; i += chunkSize) {
@@ -695,7 +695,7 @@
           length: encoded.length
         });
 
-        await delay(120);
+        await delay(300);
 
         for (let i = 0; i < chunks.length; i++) {
           sendStatus.textContent = `Sending chunk ${i + 1} of ${chunks.length}...`;
@@ -707,7 +707,7 @@
             data: chunks[i]
           });
 
-          await delay(60);
+          await delay(220);
         }
 
         sendStatus.textContent = "Finalizing setup...";
